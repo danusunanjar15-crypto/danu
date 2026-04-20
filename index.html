@@ -1,0 +1,346 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Monitor, 
+  Network, 
+  Cpu, 
+  Globe, 
+  CheckCircle2, 
+  AlertCircle, 
+  Trophy, 
+  ChevronRight, 
+  RotateCcw,
+  Award,
+  Download,
+  Volume2,
+  VolumeX
+} from 'lucide-react';
+
+const App = () => {
+  const [gameState, setGameState] = useState('menu'); 
+  const [score, setScore] = useState(0);
+  const [playerName, setPlayerName] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  
+  const audioRef = useRef(null);
+  // Tautan musik dalam format raw agar bisa diputar langsung oleh browser
+  const musicUrl = "https://raw.githubusercontent.com/sunanjar/musikdanu/main/Bright_Geometry.mp3"; 
+
+  // Fungsi untuk memicu pemutaran audio setelah interaksi user
+  const startMusic = () => {
+    if (audioRef.current) {
+      audioRef.current.play().catch(error => {
+        console.error("Gagal memutar audio. Pastikan URL valid dan koneksi internet stabil:", error);
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = isMuted;
+      audioRef.current.volume = 0.4;
+    }
+  }, [isMuted]);
+
+  // --- Data Level 1: Drag & Drop ---
+  const [l1Items, setL1Items] = useState([
+    { id: 'r1', text: 'Router', category: 'Perangkat' },
+    { id: 't1', text: 'Star', category: 'Topologi' },
+    { id: 'r2', text: 'Switch', category: 'Perangkat' },
+    { id: 't2', text: 'Mesh', category: 'Topologi' },
+    { id: 'r3', text: 'Access Point', category: 'Perangkat' },
+    { id: 't3', text: 'Bus', category: 'Topologi' },
+  ]);
+  const [l1DropZones, setL1DropZones] = useState({ 'Perangkat': [], 'Topologi': [] });
+
+  // --- Data Level 2: Matching Word ---
+  const [l2Pairs, setL2Pairs] = useState([
+    { id: 1, term: 'HTTP', definition: 'Protokol Transfer Web', matched: false },
+    { id: 2, term: 'IP Address', definition: 'Alamat unik perangkat', matched: false },
+    { id: 3, term: 'DNS', definition: 'Penerjemah Nama Domain', matched: false },
+    { id: 4, term: 'Firewall', definition: 'Sistem Keamanan Jaringan', matched: false },
+    { id: 5, term: 'FTP', definition: 'Protokol Pengiriman File', matched: false },
+  ]);
+  const [selectedTerm, setSelectedTerm] = useState(null);
+
+  // --- Data Level 3: Multiple Choice ---
+  const [currentQ, setCurrentQ] = useState(0);
+  const l3Questions = [
+    {
+      q: "Lapisan OSI yang bertanggung jawab untuk routing data adalah...",
+      options: ["Physical Layer", "Data Link Layer", "Network Layer", "Transport Layer"],
+      correct: 2
+    },
+    {
+      q: "Manakah yang merupakan ancaman jaringan berupa mengintip paket data?",
+      options: ["DDoS", "Sniffing", "Phishing", "Spoofing"],
+      correct: 1
+    },
+    {
+      q: "Subnet mask default untuk kelas C adalah...",
+      options: ["255.0.0.0", "255.255.0.0", "255.255.255.0", "255.255.255.255"],
+      correct: 2
+    }
+  ];
+
+  const handleDragStart = (e, item) => {
+    e.dataTransfer.setData('item', JSON.stringify(item));
+  };
+
+  const handleDrop = (e, category) => {
+    const item = JSON.parse(e.dataTransfer.getData('item'));
+    if (item.category === category) {
+      if (!l1DropZones[category].find(i => i.id === item.id)) {
+        setL1DropZones(prev => ({ ...prev, [category]: [...prev[category], item] }));
+        setL1Items(prev => prev.filter(i => i.id !== item.id));
+        setScore(s => s + 10);
+      }
+    }
+  };
+
+  const handleMatch = (type, item) => {
+    if (type === 'term') {
+      setSelectedTerm(item);
+    } else if (type === 'def' && selectedTerm) {
+      if (selectedTerm.id === item.id) {
+        setL2Pairs(prev => prev.map(p => p.id === item.id ? { ...p, matched: true } : p));
+        setScore(s => s + 15);
+      }
+      setSelectedTerm(null);
+    }
+  };
+
+  const handleL3Answer = (idx) => {
+    if (idx === l3Questions[currentQ].correct) setScore(s => s + 20);
+    if (currentQ < l3Questions.length - 1) {
+      setCurrentQ(currentQ + 1);
+    } else {
+      setGameState('result');
+    }
+  };
+
+  const resetGame = () => {
+    setScore(0);
+    setGameState('menu');
+    setL1Items([
+      { id: 'r1', text: 'Router', category: 'Perangkat' },
+      { id: 't1', text: 'Star', category: 'Topologi' },
+      { id: 'r2', text: 'Switch', category: 'Perangkat' },
+      { id: 't2', text: 'Mesh', category: 'Topologi' },
+      { id: 'r3', text: 'Access Point', category: 'Perangkat' },
+      { id: 't3', text: 'Bus', category: 'Topologi' },
+    ]);
+    setL1DropZones({ 'Perangkat': [], 'Topologi': [] });
+    setL2Pairs(l2Pairs.map(p => ({...p, matched: false})));
+    setCurrentQ(0);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-white font-sans p-4 md:p-8 flex flex-col items-center justify-center">
+      {/* Elemen Audio - Menggunakan format URL raw agar file bisa dibaca langsung */}
+      <audio 
+        ref={audioRef} 
+        src={musicUrl} 
+        loop 
+        preload="auto"
+      />
+
+      {/* Tombol Kontrol Suara */}
+      <button 
+        onClick={() => setIsMuted(!isMuted)}
+        className="fixed bottom-6 right-6 z-50 p-4 bg-slate-800 rounded-full border border-slate-700 hover:scale-110 transition-all shadow-2xl"
+        title={isMuted ? "Aktifkan Suara" : "Matikan Suara"}
+      >
+        {isMuted ? <VolumeX className="text-red-400" /> : <Volume2 className="text-green-400" />}
+      </button>
+
+      {/* Layout Utama Gim */}
+      <div className="w-full max-w-4xl bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 overflow-hidden relative">
+        
+        {/* Progress Bar Atas */}
+        {gameState !== 'menu' && gameState !== 'certificate' && gameState !== 'result' && (
+           <div className="absolute top-0 left-0 h-1 bg-blue-500 transition-all duration-500" 
+                style={{width: gameState === 'level1' ? '33%' : gameState === 'level2' ? '66%' : '100%'}} />
+        )}
+
+        {/* Level: Menu Utama */}
+        {gameState === 'menu' && (
+          <div className="p-12 text-center space-y-8">
+            <div className="inline-block p-4 bg-blue-500/20 rounded-full mb-4">
+              <Globe size={64} className="text-blue-400 animate-pulse" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+              NET-MASTER CHALLENGE
+            </h1>
+            <p className="text-slate-400 text-lg max-w-md mx-auto italic">
+              "Koneksi Stabil, Pengetahuan Maksimal"
+            </p>
+            <div className="space-y-4 max-w-xs mx-auto">
+              <input 
+                type="text" 
+                placeholder="Masukkan Nama Kamu" 
+                className="w-full p-4 bg-slate-700 border border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                onChange={(e) => setPlayerName(e.target.value)}
+                value={playerName}
+              />
+              <button 
+                disabled={!playerName}
+                onClick={() => {
+                    startMusic(); // Audio diputar saat tombol diklik
+                    setGameState('level1');
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-all shadow-lg"
+              >
+                MULAI PERMAINAN
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Level 1: Drag & Drop */}
+        {gameState === 'level1' && (
+          <div className="p-8">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <Network className="text-blue-400" /> Level 1: Klasifikasi
+              </h2>
+              <div className="bg-slate-900 px-4 py-2 rounded-lg font-mono text-blue-400">Skor: {score}</div>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+               <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-700">
+                  <p className="text-sm text-slate-400 mb-4 uppercase tracking-widest">Tarik Item Ini:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {l1Items.map(item => (
+                      <div key={item.id} draggable onDragStart={(e) => handleDragStart(e, item)}
+                           className="bg-slate-700 px-4 py-2 rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-600 border border-slate-600 shadow-sm transition-colors">
+                        {item.text}
+                      </div>
+                    ))}
+                  </div>
+               </div>
+               <div className="space-y-4">
+                  {Object.keys(l1DropZones).map(cat => (
+                    <div key={cat} onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, cat)}
+                         className="p-6 bg-slate-900 border-2 border-dashed border-slate-600 rounded-xl min-h-[100px] hover:border-blue-500 transition-all">
+                      <p className="text-xs font-bold text-blue-400 mb-2 uppercase">{cat}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {l1DropZones[cat].map(item => (
+                          <span key={item.id} className="bg-green-500/20 text-green-400 px-2 py-1 rounded border border-green-500/30 text-sm">
+                            {item.text}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+            <button onClick={() => setGameState('level2')} className="mt-8 float-right bg-blue-600 px-6 py-2 rounded-lg font-bold hover:bg-blue-500">Lanjut Level 2 →</button>
+          </div>
+        )}
+
+        {/* Level 2: Pasangkan Kata */}
+        {gameState === 'level2' && (
+           <div className="p-8">
+             <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Monitor className="text-blue-400" /> Level 2: Protokol
+                </h2>
+                <div className="bg-slate-900 px-4 py-2 rounded-lg font-mono text-blue-400">Skor: {score}</div>
+             </div>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  {l2Pairs.map(p => (
+                    <button key={p.id} disabled={p.matched} onClick={() => handleMatch('term', p)}
+                            className={`w-full p-4 rounded-xl text-left border transition-all ${p.matched ? 'bg-green-900/20 border-green-800 text-green-600' : selectedTerm?.id === p.id ? 'bg-blue-600 border-blue-400' : 'bg-slate-700 border-slate-600 hover:bg-slate-600'}`}>
+                      {p.term}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  {[...l2Pairs].sort((a,b) => a.definition.length - b.definition.length).map(p => (
+                    <button key={p.id} disabled={p.matched} onClick={() => handleMatch('def', p)}
+                            className={`w-full p-4 rounded-xl text-left border transition-all ${p.matched ? 'bg-green-900/20 border-green-800 text-green-600' : 'bg-slate-700 border-slate-600 hover:bg-slate-600'}`}>
+                      {p.definition}
+                    </button>
+                  ))}
+                </div>
+             </div>
+             <button onClick={() => setGameState('level3')} className="mt-8 float-right bg-blue-600 px-6 py-2 rounded-lg font-bold hover:bg-blue-500">Lanjut Level 3 →</button>
+           </div>
+        )}
+
+        {/* Level 3: Kuis Pilihan Ganda */}
+        {gameState === 'level3' && (
+          <div className="p-8">
+            <h2 className="text-2xl font-bold mb-6">Level 3: Ujian Akhir</h2>
+            <div className="bg-slate-900 p-8 rounded-2xl border border-slate-700">
+              <p className="text-lg mb-6 leading-relaxed">{l3Questions[currentQ].q}</p>
+              <div className="grid gap-3">
+                {l3Questions[currentQ].options.map((opt, idx) => (
+                  <button key={idx} onClick={() => handleL3Answer(idx)}
+                          className="p-4 bg-slate-800 border border-slate-700 rounded-xl text-left hover:bg-blue-600 hover:border-blue-400 transition-all">
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tampilan Hasil Akhir */}
+        {gameState === 'result' && (
+           <div className="p-12 text-center">
+              <Trophy size={80} className="text-yellow-400 mx-auto mb-6 animate-bounce" />
+              <h2 className="text-3xl font-bold mb-2">MISI SELESAI!</h2>
+              <p className="text-slate-400 mb-8">Selamat {playerName}, kamu telah membuktikan kemampuanmu!</p>
+              <div className="text-5xl font-black text-blue-400 mb-8">{score} Poin</div>
+              <div className="flex gap-4 justify-center">
+                <button onClick={resetGame} className="bg-slate-700 px-6 py-3 rounded-xl font-bold hover:bg-slate-600 transition-colors">Main Lagi</button>
+                <button onClick={() => setGameState('certificate')} className="bg-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/40">Lihat Sertifikat</button>
+              </div>
+           </div>
+        )}
+
+        {/* Desain Sertifikat Kelulusan */}
+        {gameState === 'certificate' && (
+           <div className="p-12 bg-white text-slate-900">
+              <div className="border-8 border-slate-200 p-8 text-center font-serif shadow-inner bg-slate-50">
+                <h1 className="text-4xl font-bold mb-4 tracking-tighter text-slate-800">SERTIFIKAT KELULUSAN</h1>
+                <p className="italic mb-6 text-slate-500">Diberikan kepada:</p>
+                <h2 className="text-5xl font-black border-b-2 border-slate-900 inline-block mb-6 text-blue-900 px-4">{playerName}</h2>
+                <p className="max-w-md mx-auto text-lg mb-8 leading-relaxed text-slate-700">
+                  Telah berhasil menyelesaikan tantangan edukasi 
+                  <span className="font-bold"> Informatika: Jaringan Komputer Modern</span> 
+                  dengan total skor akhir:
+                </p>
+                <div className="text-3xl font-bold bg-blue-100 text-blue-900 px-6 py-2 rounded-full mb-10 inline-block">
+                  {score} POIN
+                </div>
+                <div className="flex justify-between items-end mt-12 px-8">
+                  <div className="text-sm text-slate-500">Diterbitkan: {new Date().toLocaleDateString()}</div>
+                  <div className="text-center">
+                    <div className="w-32 border-b border-slate-400 mb-2"></div>
+                    <p className="text-xs font-bold text-slate-800">INSTURKTUR DIGITAL</p>
+                    <p className="text-[10px] text-slate-400 uppercase">Net-Master Challenge</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-4 mt-8 no-print justify-center">
+                <button onClick={() => window.print()} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors">Cetak PDF</button>
+                <button onClick={resetGame} className="bg-slate-200 text-slate-800 px-8 py-3 rounded-xl font-bold hover:bg-slate-300 transition-colors">Ke Menu Utama</button>
+              </div>
+           </div>
+        )}
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print { 
+          .no-print { display: none !important; } 
+          body { background: white !important; }
+        }
+      `}} />
+    </div>
+  );
+};
+
+export default App;
